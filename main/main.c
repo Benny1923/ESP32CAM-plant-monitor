@@ -1,17 +1,25 @@
-/* Hello World Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
+/* ESP32CAM_PLANT_MONITOR
+   this program is made by Benny1923
+   part of the potted monitor system
 */
 #include <stdio.h>
+#include <string.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "esp_log.h"
 #include "esp_spi_flash.h"
+#include <time.h>
+#include <sys/time.h>
+#include <dirent.h>
+
+#include "include/wifi_connection.h"
+#include "include/ntp_adj.h"
+#include "include/sdcard.h"
+#include "include/camera.h"
+
+static char *TAG = "initial program";
 
 void app_main(void)
 {
@@ -32,6 +40,49 @@ void app_main(void)
             (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
+
+    //wifi_init_sta();
+
+    //ntp_adj();
+    
+    time_t now;
+    struct tm timeinfo;
+    char strftime_buf[64];
+    time(&now);
+    setenv("TZ", "CST-8", 1);
+    tzset();
+    localtime_r(&now, &timeinfo);
+    if (timeinfo.tm_year < (2016 - 1900)) {
+        wifi_init_sta();
+        ntp_adj();
+        time(&now);
+    }
+    localtime_r(&now, &timeinfo);
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+    ESP_LOGI(TAG, "The current date/time in Taipei is: %s", strftime_buf);
+
+    init_sdcard();
+
+    // DIR *d;
+    // struct dirent *dir;
+    // d = opendir("/sdcard");
+    // if (d) {
+    //     while((dir=readdir(d)) != NULL) {
+    //         printf("%s\n", dir->d_name);
+    //     }
+    //     closedir(d);
+    // }
+
+    init_camera();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    uint8_t *buf;
+    size_t len;
+    len = take_picture(&buf);
+    char *path = malloc(strlen("/sdcard/pic_hh-MM-ss.jpg")+1);
+    char pic_time[9];
+    strftime(pic_time, 9, "%H-%M-%S", &timeinfo);
+    sprintf(path, "/sdcard/pic_%.8s.jpg", pic_time);
+    save_file(buf, len, path);
 
     for (int i = 10; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
