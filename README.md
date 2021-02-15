@@ -4,7 +4,7 @@
 
 Nothing here, it's not done yet.
 
-or you can ckeckout `dev` branch.
+or you can checkout `dev` branch.
 
 ## 功能/TODO
 
