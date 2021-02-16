@@ -42,4 +42,11 @@ menu "Porject Configuration"
             help
                 Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
     endmenu
+    menu "Server Settings"
+        config SERVER_ADDR
+            string "Server address"
+            default "192.168.1.214"
+            help
+                the server that ESP32 will connect to.
+    endmenu
 endmenu

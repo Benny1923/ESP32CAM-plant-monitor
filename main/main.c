@@ -14,11 +14,13 @@
 #include <sys/time.h>
 #include <dirent.h>
 
+#include "include/common.h"
 #include "include/wifi_connection.h"
 #include "include/ntp_adj.h"
 #include "include/sdcard.h"
 #include "include/camera.h"
 #include "include/i2c_con.h"
+#include "include/http_client.h"
 
 static char *TAG = "initial program";
 
@@ -42,7 +44,7 @@ void app_main(void)
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 
-    // wifi_init_sta();
+    wifi_init_sta();
 
     // ntp_adj();
     
@@ -74,31 +76,42 @@ void app_main(void)
     //     closedir(d);
     // }
 
-    // init_camera();
-    // vTaskDelay(1000 / portTICK_PERIOD_MS);
+    init_camera();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     // uint8_t *buf;
     // size_t len;
     // len = take_picture(&buf);
+
+    http_post_img_t img = {
+        .name = "owo",
+        .filename = "uwu.jpg"
+    };
+
+    img.len = take_picture(&img.buf);
+
+    xTaskCreate(&post_img, "post_img", 8192, &img, 5, NULL);
+
+
     // char *path = malloc(strlen("/sdcard/pic_hh-MM-ss.jpg")+1);
     // char pic_time[9];
     // strftime(pic_time, 9, "%H-%M-%S", &timeinfo);
     // sprintf(path, "/sdcard/pic_%.8s.jpg", pic_time);
     // save_file(buf, len, path);
 
-    wire_begin();
-    lux_setup();
-    while(1) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        lux_read();
-        adc_read(0);
-        adc_read(1);
-    }
+    // wire_begin();
+    // lux_setup();
+    // while(1) {
+    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+    //     lux_read();
+    //     adc_read(0);
+    //     adc_read(1);
+    // }
 
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
+    // for (int i = 10; i >= 0; i--) {
+    //     printf("Restarting in %d seconds...\n", i);
+    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+    // }
+    // printf("Restarting now.\n");
+    // fflush(stdout);
+    // esp_restart();
 }
