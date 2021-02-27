@@ -1,10 +1,13 @@
 #include "include/sdcard.h"
+#include "include/common.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/sdmmc_host.h"
 #include "driver/sdmmc_defs.h"
 #include "sdmmc_cmd.h"
 #include "esp_vfs_fat.h"
+#include <sys/time.h>
+#include <string.h>
 
 sdmmc_card_t *card;
 
@@ -38,5 +41,33 @@ void save_file(uint8_t *buf, size_t len, char *filename) {
     size_t err = fwrite(buf, 1, len, file);
     ESP_LOGI(TAG, "File saved: %s", filename);
   }
+  fclose(file);
+}
+
+const char *time_format = "[2020/02/25 13:30:15]";
+
+char *get_time() {
+  char *timestamp = (char*) malloc(strlen(time_format)+1);
+  time_t now;
+  time(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  if (timeinfo.tm_year < (2020-1900)) {
+    free(timestamp);
+    return "[powerup]";
+  } else {
+    strftime(timestamp, strlen(time_format)+1, "[%Y/%m/%d %H:%M:%S]", &timeinfo);
+    return timestamp;
+  }
+}
+
+void save_log(char *unit, char *msg) {
+  FILE *file = fopen("/sdcard/log.txt", "a");
+  fputs(get_time(),file);
+  fputs(" ", file);
+  fputs(unit, file);
+  fputs(": ", file);
+  fputs(msg, file);
+  fputs("\n",file);
   fclose(file);
 }

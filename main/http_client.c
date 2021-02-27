@@ -8,6 +8,8 @@
 #include "esp_tls.h"
 #include "esp_http_client.h"
 
+#define SERVER_URL CONFIG_SERVER_ADDR
+
 static char *TAG = "http client";
 
 #define MAX_HTTP_RECV_BUFFER 512
@@ -93,12 +95,14 @@ static char *newstr(size_t len) {
 }
 
 static void strpad(char **des, char *src) {
-        size_t len = strlen(*des) + strlen(src) + 1;
-        char *res = newstr(len);
-        strcat(res, *des);
-        strcat(res, src);
-        free(*des);
-        *des = res;
+    size_t len = strlen(*des) + strlen(src) + 1;
+    char *res = newstr(len);
+    char *temp = newstr(strlen(src)+1);
+    strcpy(res, *des);
+    strcpy(temp, src);
+    strcat(res, temp);
+    free(*des);
+    *des = res;
 }
 
 static char *packhead(char *name, char *filename) {
@@ -126,8 +130,9 @@ esp_err_t http_post(char *buf, size_t len, char *name, char *filename) {
      * If URL as well as host and path parameters are specified, values of host and path will be considered.
      */
     esp_http_client_config_t config = {
-        .host = "httpbin.org",
-        .path = "/get",
+        .host = SERVER_URL,
+        .port = 8080,
+        .path = "/api/ESP32/saveimg",
         .query = "esp",
         .event_handler = _http_event_handler,
         .user_data = local_response_buffer,        // Pass address of local buffer to get response
@@ -135,12 +140,12 @@ esp_err_t http_post(char *buf, size_t len, char *name, char *filename) {
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     char *post_data = packhead(name, filename);
-    //esp_http_client_set_url(client, "http://192.168.1.214:8080/post");
-    esp_http_client_set_url(client, "http://httpbin.org/post");
+    //esp_http_client_set_url(client, "http://httpbin.org/post"); //when you test protocol
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", contype);
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
     ret = esp_http_client_open(client, strlen(post_data)+len+strlen(boundary_end));
+    if (ret != ESP_OK) return ret;
     esp_http_client_write(client, post_data, strlen(post_data));
     esp_http_client_write(client, buf, len);
     esp_http_client_write(client, boundary_end, strlen(boundary_end));
@@ -161,6 +166,13 @@ esp_err_t http_post(char *buf, size_t len, char *name, char *filename) {
 }
 
 void post_img(http_post_img_t *img) {
-    http_post((char*)img->buf, img->len, img->name, img->filename);
+    int retry = 0;
+    esp_err_t ret;
+    try:
+    ret = http_post((char*)img->buf, img->len, img->name, img->filename);
+    if (ret != ESP_OK && retry < 3) {
+        retry++;
+        goto try;
+    }
     vTaskDelete(NULL);
 }
