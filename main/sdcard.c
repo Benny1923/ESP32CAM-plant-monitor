@@ -44,6 +44,7 @@ void save_file(uint8_t *buf, size_t len, char *filename) {
   fclose(file);
 }
 
+//example timestamp
 const char *time_format = "[2020/02/25 13:30:15]";
 
 char *get_time() {
@@ -61,6 +62,7 @@ char *get_time() {
   }
 }
 
+//log feature, save log to log.txt
 void save_log(char *unit, char *msg) {
   FILE *file = fopen("/sdcard/log.txt", "a");
   fputs(get_time(),file);

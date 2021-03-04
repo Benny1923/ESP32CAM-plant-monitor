@@ -1,0 +1,15 @@
+#ifndef PCF8574T_H
+#define PCF8574T_H
+
+#define PCF8574T_ADDRESS 0x20
+
+#define PCF8574T_GPIO_0 0x01
+#define PCF8574T_GPIO_1 0x02
+#define PCF8574T_GPIO_2 0x04
+#define PCF8574T_GPIO_3 0x08
+#define PCF8574T_GPIO_4 0x10
+#define PCF8574T_GPIO_5 0x20
+#define PCF8574T_GPIO_6 0x40
+#define PCF8574T_GPIO_7 0x80
+
+#endif

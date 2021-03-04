@@ -38,7 +38,7 @@ static camera_config_t camera_config = {
     .fb_count = 1       //if more than one, i2s runs in continuous mode. Use only with JPEG
 };
 
-
+//初始化相機
 esp_err_t init_camera() {
     //initialize the camera
     esp_err_t err = esp_camera_init(&camera_config);
@@ -53,6 +53,7 @@ esp_err_t init_camera() {
 
 static camera_fb_t *pic;
 
+//拍照
 size_t take_picture(uint8_t **buf) {
     ESP_LOGI(TAG, "Taking picture...");
     pic = esp_camera_fb_get();

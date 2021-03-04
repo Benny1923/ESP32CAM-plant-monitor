@@ -1,4 +1,4 @@
-#include "include/ntp_adj.h"
+#include "include/common.h"
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>

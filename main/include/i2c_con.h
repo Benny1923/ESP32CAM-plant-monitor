@@ -2,6 +2,7 @@
 #define I2C_CON_H
 
 #include <esp_system.h>
+#include <driver/i2c.h>
 
 #define _I2C_NUMBER(num) I2C_NUM_##num
 #define I2C_NUMBER(num) _I2C_NUMBER(num)
@@ -26,7 +27,8 @@
 
 esp_err_t wire_begin();
 esp_err_t lux_setup();
-esp_err_t lux_read();
-esp_err_t adc_read(uint8_t ch);
+esp_err_t lux_read(uint8_t *data);
+esp_err_t adc_read(uint8_t ch, uint8_t *data);
+esp_err_t pcf8574t_gpio_set(int pin, int enable);
 
 #endif

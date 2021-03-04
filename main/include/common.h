@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "esp_system.h"
 
+void ntp_adj(void);
 void save_log(char *unit, char *msg);
 
 typedef struct {
@@ -17,6 +18,6 @@ typedef struct {
     int lux;
     int moisture;
     double ph;
-} sensors_data;
+} sensors_data_t;
 
 #endif

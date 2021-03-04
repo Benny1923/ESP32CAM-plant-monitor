@@ -12,21 +12,46 @@
 #include "esp_spi_flash.h"
 #include <time.h>
 #include <sys/time.h>
-#include <dirent.h>
 
 #include "include/common.h"
 #include "include/wifi_connection.h"
-#include "include/ntp_adj.h"
 #include "include/sdcard.h"
 #include "include/camera.h"
 #include "include/i2c_con.h"
 #include "include/http_client.h"
 #include "include/ws_connect.h"
 
-static char *TAG = "initial program";
+static char *TAG = "setup";
 
-void app_main(void)
-{
+#include "freertos/event_groups.h"
+
+
+//hardware self test, but not include internet connection
+esp_err_t self_test(void) {
+    char *unit = "self_test";
+    ESP_LOGI(unit, "staring self test");
+    esp_err_t ret = ESP_OK;
+    uint8_t data = 0;
+    //ret = lux_read(&data);
+    // if (data > 300) ret = ESP_FAIL; //data incorrect
+    if (ret != ESP_OK) goto fail;
+    ret = adc_read(0, &data);
+    ret = adc_read(1, &data);
+    if (ret != ESP_OK) goto fail;
+    pcf8574t_gpio_set(0, 1);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+    pcf8574t_gpio_set(1, 1);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+    pcf8574t_gpio_set(1, 0);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+    pcf8574t_gpio_set(0, 0);
+    return ESP_OK;
+    //when fail
+    fail:
+        return ESP_FAIL;
+}
+
+void app_main(void) {
     printf("Hello world!\n");
 
     /* Print chip information */
@@ -45,82 +70,37 @@ void app_main(void)
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 
-//     init_sdcard();
-//     save_log(TAG, "sdcard mounted.");
-//     save_log(TAG, "trying connect to AP.");
-//     wifi_init_sta();
-//     save_log(TAG, "wifi connected.");
-//     save_log(TAG, "adjusting clock.");
-//     ntp_adj();
-//     save_log(TAG, "adjusting clock finish!");
-
-//     xTaskCreate(&websocket_app_start, "websokcket", 8192, NULL, 5, NULL);
-//     printf("after app start.\n");
-
-    time_t now;
-    struct tm timeinfo;
-    char strftime_buf[64];
-    time(&now);
-    setenv("TZ", "CST-8", 1);
-    tzset();
-    localtime_r(&now, &timeinfo);
-    if (timeinfo.tm_year < (2016 - 1900)) {
-        wifi_init_sta();
-        ntp_adj();
-        time(&now);
+    esp_err_t ret;
+    //mounting sdcard
+    init_sdcard();
+    //initialize camera
+    ret = init_camera();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "fail to initialize camera");
+        goto end;
     }
-    localtime_r(&now, &timeinfo);
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time in Taipei is: %s", strftime_buf);
+    //system setup
+    ret = wire_begin();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "fail to initialize I2C");
+        //goto end;
+    }
+    //ret = lux_setup();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "fail to initialize BH1750: %s", esp_err_to_name(ret));
+        goto end;
+    }
+    ret = self_test();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "self test fail");
+        goto end;
+    } else {
+        ESP_LOGI(TAG, "self test success");
+    }
 
-//     init_sdcard();
-
-//     DIR *d;
-//     struct dirent *dir;
-//     d = opendir("/sdcard");
-//     if (d) {
-//         while((dir=readdir(d)) != NULL) {
-//             printf("%s\n", dir->d_name);
-//         }
-//         closedir(d);
-//     }
-
-    init_camera();
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-    static http_post_img_t img = {
-        .name = "img",
-    };
-
-    img.filename = (char*) malloc(strlen("pic_HH-MM-SS.jpg")+1);
-    strftime(img.filename, 17, "pic_%H-%M-%S.jpg", &timeinfo);
-
-    img.len = take_picture(&img.buf);
-
-    //xTaskCreate(&websocket_app_start, "websokcket", 8192, NULL, 5, NULL);
-    xTaskCreate(&post_img, "post_img", 8192, &img, 5, NULL);
-
-
-//     char *path = malloc(strlen("/sdcard/pic_hh-MM-ss.jpg")+1);
-//     char pic_time[9];
-//     strftime(pic_time, 9, "%H-%M-%S", &timeinfo);
-//     sprintf(path, "/sdcard/pic_%.8s.jpg", pic_time);
-//     save_file(buf, len, path);
-
-//     wire_begin();
-//     lux_setup();
-//     while(1) {
-//         vTaskDelay(1000 / portTICK_PERIOD_MS);
-//         lux_read();
-//         adc_read(0);
-//         adc_read(1);
-//     }
-
-//     for (int i = 10; i >= 0; i--) {
-//         printf("Restarting in %d seconds...\n", i);
-//         vTaskDelay(1000 / portTICK_PERIOD_MS);
-//     }
-//     printf("Restarting now.\n");
-//     fflush(stdout);
-//     esp_restart();
+    //when something fail
+    end:
+        ESP_LOGI(TAG, "system stopped");
+    // fflush(stdout);
+    // esp_restart();
 }

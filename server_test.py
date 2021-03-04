@@ -13,6 +13,10 @@ app = Flask(__name__)
 def index():
     return "Hello nothing there"
 
+@app.route('/api/status')
+def isonline():
+    return "unknow"
+
 @app.route('/api/ESP32/saveimg', methods=['POST'])
 def saveimg():
     if request.files['img']:

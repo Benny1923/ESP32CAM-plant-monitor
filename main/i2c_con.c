@@ -1,9 +1,12 @@
 #include "include/i2c_con.h"
 #include "include/BH1750.h"
 #include "include/ADS1115.h"
+#include "include/PCF8574T.h"
 #include <stdio.h>
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "esp_log.h"
 #include "driver/i2c.h"
 
@@ -27,6 +30,7 @@ static esp_err_t i2c_master_init(void) {
     return i2c_driver_install(i2c_master_port, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 
+//初始化I2C
 esp_err_t wire_begin() {
     int ret = i2c_master_init();
     if (ret != ESP_OK) {
@@ -35,6 +39,7 @@ esp_err_t wire_begin() {
     return ret;
 }
 
+//亮度感測器設定
 esp_err_t lux_setup() {
     int ret;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -52,7 +57,8 @@ esp_err_t lux_setup() {
     return ret;
 }
 
-esp_err_t lux_read() {
+//亮度感測器
+esp_err_t lux_read(uint8_t *data) {
     uint8_t data_h = 0, data_l = 0;
     int ret;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -63,11 +69,13 @@ esp_err_t lux_read() {
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
+    *data = (data_h << 8 | data_l);
     ESP_LOGI(TAG, "BH1750: %.02flux", (data_h << 8 | data_l) / 1.2);
     return ret;
 }
 
-esp_err_t adc_read(uint8_t ch) {
+//AD轉換(單一頻道)
+esp_err_t adc_read(uint8_t ch, uint8_t *data) {
     uint8_t data_h = 0, data_l = 0;
     // Start with default values
     uint16_t config =
@@ -138,6 +146,64 @@ esp_err_t adc_read(uint8_t ch) {
         ESP_LOGE(TAG, "cannot read ADC(%d)", ch);
         return ret;
     }
+    *data = (data_h << 8 | data_l);
     ESP_LOGI(TAG, "ADS1115(%d): %d", ch, (data_h << 8 | data_l));
+    return ret;
+}
+
+static uint8_t gpio_status = 0x00;
+
+//PCF8574T GPIO設定
+esp_err_t pcf8574t_gpio_set(int pin, int enable) {
+    uint8_t config = 0;
+    switch (pin) {
+    case (0):
+        config |= PCF8574T_GPIO_0;
+        break;
+    case (1):
+        config |= PCF8574T_GPIO_1;
+        break;
+    case (2):
+        config |= PCF8574T_GPIO_2;
+        break;
+    case (3):
+        config |= PCF8574T_GPIO_3;
+        break;
+    case (4):
+        config |= PCF8574T_GPIO_4;
+        break;
+    case (5):
+        config |= PCF8574T_GPIO_5;
+        break;
+    case (6):
+        config |= PCF8574T_GPIO_6;
+        break;
+    case (7):
+        config |= PCF8574T_GPIO_7;
+        break;
+    default:
+        ESP_LOGI(TAG, "PCF8574T: channel doesn't exist, do nothing.");
+        return ESP_OK;
+        break;
+    }
+
+    if (enable) {
+        gpio_status |= config;
+    } else {
+        gpio_status &= ~config;
+    }
+
+    int ret;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, PCF8574T_ADDRESS << 1 | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, gpio_status, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "cannot setup PCF8574T(%d)", pin);
+        return ret;
+    }
     return ret;
 }
