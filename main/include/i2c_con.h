@@ -27,8 +27,8 @@
 
 esp_err_t wire_begin();
 esp_err_t lux_setup();
-esp_err_t lux_read(uint8_t *data);
-esp_err_t adc_read(uint8_t ch, uint8_t *data);
+esp_err_t lux_read(uint16_t *data);
+esp_err_t adc_read(uint8_t ch, uint16_t *data);
 esp_err_t pcf8574t_gpio_set(int pin, int enable);
 
 #endif

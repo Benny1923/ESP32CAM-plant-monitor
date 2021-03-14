@@ -1,0 +1,17 @@
+#local config file
+#if not exist, esp32 can't initialize
+#overwrite when server update
+#no space allow between any character
+light-start=12:02
+light-end=17:03
+light-max=17
+light-min=22
+sprinklers-start=06:01
+sprinklers-end=07:29
+sprinklers-min=27
+#camera-start/end ignore when nightmode set true
+camera-start=08:09
+camera-end=07:29
+#1:true 0:false
+camera-nightmode=1
+camera-interval=12

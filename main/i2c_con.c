@@ -58,7 +58,7 @@ esp_err_t lux_setup() {
 }
 
 //亮度感測器
-esp_err_t lux_read(uint8_t *data) {
+esp_err_t lux_read(uint16_t *data) {
     uint8_t data_h = 0, data_l = 0;
     int ret;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -75,7 +75,7 @@ esp_err_t lux_read(uint8_t *data) {
 }
 
 //AD轉換(單一頻道)
-esp_err_t adc_read(uint8_t ch, uint8_t *data) {
+esp_err_t adc_read(uint8_t ch, uint16_t *data) {
     uint8_t data_h = 0, data_l = 0;
     // Start with default values
     uint16_t config =
@@ -151,7 +151,7 @@ esp_err_t adc_read(uint8_t ch, uint8_t *data) {
     return ret;
 }
 
-static uint8_t gpio_status = 0x00;
+static uint8_t gpio_status = 0xFF;
 
 //PCF8574T GPIO設定
 esp_err_t pcf8574t_gpio_set(int pin, int enable) {

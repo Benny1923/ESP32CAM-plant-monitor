@@ -25,26 +25,24 @@ static char *TAG = "setup";
 
 #include "freertos/event_groups.h"
 
-
 //hardware self test, but not include internet connection
 esp_err_t self_test(void) {
     char *unit = "self_test";
     ESP_LOGI(unit, "staring self test");
     esp_err_t ret = ESP_OK;
-    uint8_t data = 0;
-    //ret = lux_read(&data);
-    // if (data > 300) ret = ESP_FAIL; //data incorrect
+    uint16_t data = 0;
+    ret = lux_read(&data);
+    if (data > 300) ret = ESP_FAIL; //data incorrect
     if (ret != ESP_OK) goto fail;
     ret = adc_read(0, &data);
     ret = adc_read(1, &data);
     if (ret != ESP_OK) goto fail;
-    pcf8574t_gpio_set(0, 1);
+    ret = pcf8574t_gpio_set(1, 0);
+    if (ret != ESP_OK) goto fail;
     vTaskDelay(1000/portTICK_PERIOD_MS);
-    pcf8574t_gpio_set(1, 1);
-    vTaskDelay(1000/portTICK_PERIOD_MS);
-    pcf8574t_gpio_set(1, 0);
-    vTaskDelay(1000/portTICK_PERIOD_MS);
-    pcf8574t_gpio_set(0, 0);
+    ret = pcf8574t_gpio_set(1, 1);
+    if (ret != ESP_OK) goto fail;
+
     return ESP_OK;
     //when fail
     fail:
@@ -73,6 +71,7 @@ void app_main(void) {
     esp_err_t ret;
     //mounting sdcard
     init_sdcard();
+    goto aftertest;
     //initialize camera
     ret = init_camera();
     if (ret != ESP_OK) {
@@ -85,7 +84,7 @@ void app_main(void) {
         ESP_LOGE(TAG, "fail to initialize I2C");
         //goto end;
     }
-    //ret = lux_setup();
+    ret = lux_setup();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "fail to initialize BH1750: %s", esp_err_to_name(ret));
         goto end;
@@ -98,6 +97,11 @@ void app_main(void) {
         ESP_LOGI(TAG, "self test success");
     }
 
+    aftertest:
+    ret = load_config();
+
+    //when nothing wrong
+    return;
     //when something fail
     end:
         ESP_LOGI(TAG, "system stopped");
