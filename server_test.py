@@ -3,11 +3,14 @@
 
 #!/usr/bin/env python
 
-import os
-from geventwebsocket import WebSocketServer, WebSocketError
+import os, time
+from geventwebsocket import WebSocketServer, WebSocketError, WebSocketApplication, Resource
 from flask import Flask, request, render_template, abort
 
 app = Flask(__name__)
+
+#esp32 last reponse time
+lastresponse = time.time()
 
 @app.route('/')
 def index():
@@ -15,7 +18,11 @@ def index():
 
 @app.route('/api/status')
 def isonline():
-    return "unknow"
+    global lastresponse
+    if ((time.time() - lastresponse) < 5):
+        return "online"
+    else:
+        return "offline"
 
 @app.route('/api/ESP32/saveimg', methods=['POST'])
 def saveimg():
@@ -27,23 +34,22 @@ def saveimg():
     else:
         return "FAIL"
 
-@app.route('/websocket')
-def websocket():
-    ws = request.environ.get('wsgi.websocket')
+class ChatApplication(WebSocketApplication):
+    def on_open(self):
+        global lastresponse
+        print("client connected!")
+        lastresponse = time.time()
+    def on_message(self, message):
+        global lastresponse
+        print("message received!")
+        lastresponse = time.time()
+    def on_close(self, reason):
+        print("Connection closed!")
 
-    if not ws:
-        abort(400, "Expected WebSocket request")
-
-    while True:
-        try:
-            message = ws.receive()
-            print("recived message: {}".format(message))
-            ws.send("Your message was: {}".format(message))
-        except WebSocketError:
-            # Possibility to execute code when connection is closed
-            break
-    return 'bye'
 
 if __name__ == '__main__':
-    server = WebSocketServer(("0.0.0.0", 8080), app)
+    server = WebSocketServer(("0.0.0.0", 8080), Resource([
+        ('^/websocket', ChatApplication),
+        ('^/.*', app)
+    ]))
     server.serve_forever()

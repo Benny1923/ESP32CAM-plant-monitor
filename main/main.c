@@ -71,6 +71,15 @@ void app_main(void) {
     esp_err_t ret;
     //mounting sdcard
     init_sdcard();
+    load_config();
+    if (sys_config.SSID == NULL && sys_config.password == NULL){
+        ESP_LOGI(TAG, "wifi config not found, use built in config to access wifi");
+        ret = wifi_init_sta(NULL, NULL);
+    } else {
+        ESP_LOGI(TAG, "SSID and password found, use config.txt to access wifi");
+        ret = wifi_init_sta(sys_config.SSID, sys_config.password);
+    }
+    if (ret == ESP_FAIL) goto end;
     goto aftertest;
     //initialize camera
     ret = init_camera();
@@ -98,7 +107,7 @@ void app_main(void) {
     }
 
     aftertest:
-    ret = load_config();
+    xTaskCreate(&websocket_app_start, "ws_app_start", 8192, NULL, 5, NULL);
 
     //when nothing wrong
     return;

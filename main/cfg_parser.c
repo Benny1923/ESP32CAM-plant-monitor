@@ -15,10 +15,14 @@ struct dataset{
     char *type;
 };
 
+//全域系統參數
 sys_config_t sys_config;
 
 //解析器綁定
 struct dataset data[] = {
+    {"SSID", &sys_config.SSID, "char"},
+    {"password", &sys_config.password, "char"},
+    {"server", &sys_config.server, "char"},
     {"light-start", &sys_config.light.start, "char"},
     {"light-end", &sys_config.light.end, "char"},
     {"light-max", &sys_config.light.min, "int"},
@@ -32,7 +36,7 @@ struct dataset data[] = {
     {"camera-nightmode", &sys_config.camera.nightmode, "int"},
 };
 
-//load config
+//load config to sys_config
 esp_err_t load_config(void) {
     if (access(CFG_PATH, R_OK | W_OK) == -1) {
         ESP_LOGE(TAG, "cannot access %s", CFG_PATH);
@@ -59,6 +63,7 @@ esp_err_t load_config(void) {
             }
         }
     }
+    fclose(file);
 
     for(int i=0 ; i<(sizeof(data)/sizeof(struct dataset)); i++) {
         if (strcmp(data[i].type, "char") == 0) {
@@ -70,5 +75,25 @@ esp_err_t load_config(void) {
 
     return ESP_OK;
     fail: 
+    return ESP_FAIL;
+}
+
+//update config.txt from sys_config
+//unsupport wifi SSID and password
+//not done yet
+esp_err_t update_config() {
+    if (access(CFG_PATH, R_OK | W_OK) == -1) {
+        ESP_LOGE(TAG, "cannot access %s", CFG_PATH);
+        goto fail;
+    }
+    FILE *file = fopen(CFG_PATH, "r+");
+    char *line = malloc(60);
+    int len = 60;
+    while(fgets(line, len, file)!=NULL) {
+        
+    }
+    fclose(file);
+    return ESP_OK;
+    fail:
     return ESP_FAIL;
 }

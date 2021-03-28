@@ -5,6 +5,7 @@
 #include "freertos/event_groups.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
+#include <string.h>
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
@@ -40,8 +41,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-void wifi_init_sta(void)
-{
+esp_err_t wifi_init_sta(char *SSID, char *password) {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
       ESP_ERROR_CHECK(nvs_flash_erase());
@@ -86,6 +86,12 @@ void wifi_init_sta(void)
             },
         },
     };
+
+    if (SSID != NULL) {
+        strcpy((char *)wifi_config.sta.ssid, SSID);
+        strcpy((char *)wifi_config.sta.password, password);
+    }
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
     ESP_ERROR_CHECK(esp_wifi_start() );
@@ -104,16 +110,21 @@ void wifi_init_sta(void)
      * happened. */
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-                 ESP_CAM_WIFI_SSID, ESP_CAM_WIFI_PASS);
+                 wifi_config.sta.ssid, wifi_config.sta.password);
+        ret = ESP_OK;
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-                 ESP_CAM_WIFI_SSID, ESP_CAM_WIFI_PASS);
+                 wifi_config.sta.ssid, wifi_config.sta.password);
+        ret = ESP_FAIL;
     } else {
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
+        ret = ESP_FAIL;
     }
 
     /* The event will not be processed after unregister */
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
     vEventGroupDelete(s_wifi_event_group);
+
+    return ret;
 }

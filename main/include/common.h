@@ -6,6 +6,7 @@
 void ntp_adj(void);
 void save_log(char *unit, char *msg);
 esp_err_t load_config(void);
+char *create_response_msg(int type, void *ptr);
 
 typedef struct {
     uint8_t *buf;
@@ -45,6 +46,11 @@ typedef struct {
     light_config_t light;
     sprinklers_config_t sprinklers;
     camera_config_t camera;
+    char *SSID;
+    char *password;
+    char *server;
 } sys_config_t;
+
+extern sys_config_t sys_config;
 
 #endif

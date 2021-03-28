@@ -2,6 +2,9 @@
 #if not exist, esp32 can't initialize
 #overwrite when server update
 #no space allow between any character
+SSID=myssid
+password=mypassword
+server=192.168.1.214
 light-start=12:02
 light-end=17:03
 light-max=17
