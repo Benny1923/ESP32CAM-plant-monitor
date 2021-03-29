@@ -8,8 +8,6 @@
 #include "esp_tls.h"
 #include "esp_http_client.h"
 
-#define SERVER_URL CONFIG_SERVER_ADDR
-
 static char *TAG = "http client";
 
 #define MAX_HTTP_RECV_BUFFER 512
@@ -90,21 +88,6 @@ const char *boundary_end = "\r\n--x19randomstring23x--\r\n";
 
 const char *contype = "multipart/form-data; boundary=x19randomstring23x";
 
-static char *newstr(size_t len) {
-    return calloc(len , sizeof(char));
-}
-
-static void strpad(char **des, char *src) {
-    size_t len = strlen(*des) + strlen(src) + 1;
-    char *res = newstr(len);
-    char *temp = newstr(strlen(src)+1);
-    strcpy(res, *des);
-    strcpy(temp, src);
-    strcat(res, temp);
-    free(*des);
-    *des = res;
-}
-
 static char *packhead(char *name, char *filename) {
     char *data = newstr(1);
     strpad(&data, "--");
@@ -130,7 +113,7 @@ esp_err_t http_post(char *buf, size_t len, char *name, char *filename) {
      * If URL as well as host and path parameters are specified, values of host and path will be considered.
      */
     esp_http_client_config_t config = {
-        .host = SERVER_URL,
+        .host = CONFIG_SERVER_ADDR,
         .port = 8080,
         .path = "/api/ESP32/saveimg",
         .query = "esp",
@@ -140,6 +123,9 @@ esp_err_t http_post(char *buf, size_t len, char *name, char *filename) {
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     char *post_data = packhead(name, filename);
+    if (sys_config.server != NULL) {
+        strcpy(config.host, sys_config.server);
+    }
     //esp_http_client_set_url(client, "http://httpbin.org/post"); //when you test protocol
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", contype);

@@ -1,4 +1,5 @@
 #include "include/ws_connect.h"
+#include "include/common.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_event.h"
@@ -45,8 +46,16 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
 
 void websocket_app_start(void) {
     esp_websocket_client_config_t websocket_cfg = {};
-    websocket_cfg.uri = CONFIG_WEBSOCKET_URI;
-    websocket_cfg.ping_interval_sec = 3;    
+    if (sys_config.server != NULL) {
+        char *url = newstr(1);
+        strpad(&url, "ws://");
+        strpad(&url, sys_config.server);
+        strpad(&url, ":8080/websocket");
+        websocket_cfg.uri = url;
+    } else {
+        websocket_cfg.uri = CONFIG_WEBSOCKET_URI;
+    }
+    websocket_cfg.ping_interval_sec = 3;
     ESP_LOGI(TAG, "Connecting to %s...", websocket_cfg.uri);
     client = esp_websocket_client_init(&websocket_cfg);
     esp_websocket_register_events(client, WEBSOCKET_EVENT_ANY, websocket_event_handler, (void *)client);

@@ -79,6 +79,13 @@ void app_main(void) {
         ESP_LOGI(TAG, "SSID and password found, use config.txt to access wifi");
         ret = wifi_init_sta(sys_config.SSID, sys_config.password);
     }
+    
+    if (sys_config.server == NULL) {
+        ESP_LOGI(TAG, "server ip not found in config.txt, use built in config: %s", CONFIG_SERVER_ADDR);
+    } else {
+        ESP_LOGI(TAG, "server ip found in config.txt: %s", sys_config.server);
+    }
+    
     if (ret == ESP_FAIL) goto end;
     goto aftertest;
     //initialize camera

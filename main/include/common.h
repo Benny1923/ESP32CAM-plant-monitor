@@ -8,6 +8,9 @@ void save_log(char *unit, char *msg);
 esp_err_t load_config(void);
 char *create_response_msg(int type, void *ptr);
 
+char *newstr(size_t len);
+void strpad(char **des, char *src);
+
 typedef struct {
     uint8_t *buf;
     size_t len;
