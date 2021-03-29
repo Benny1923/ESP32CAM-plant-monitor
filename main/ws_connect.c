@@ -18,7 +18,21 @@ static char *TAG = "websocket";
 
 static esp_websocket_client_handle_t client;
 
-TimerHandle_t ping_timer;
+TimerHandle_t ping_pong_timer;
+
+static int ping_pong_count = 0;
+
+static void ping_pong_counter(TimerHandle_t xTimer) {
+    ping_pong_count += 1;
+}
+
+void send_data(char *data, size_t len) {
+    if (esp_websocket_client_is_connected(client)) {
+        esp_websocket_client_send_text(client, *data, len+1, portMAX_DELAY);
+        ping_pong_count = 0;
+    }
+    return;
+}
 
 static void websocket_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -26,20 +40,26 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
     switch (event_id) {
     case WEBSOCKET_EVENT_CONNECTED:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_CONNECTED");
+        xTimerStart(ping_pong_timer, portMAX_DELAY);
         break;
     case WEBSOCKET_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_DISCONNECTED");
+        xTimerStop(ping_pong_timer, 0);
         break;
     case WEBSOCKET_EVENT_DATA:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_DATA");
         if (data->data_len > 2) {
             ESP_LOGI(TAG, "receive data: %s", (char*)data->data_ptr);
         } else {
-            esp_websocket_client_send_text(client, "pong", 5, portMAX_DELAY);
+            if (ping_pong_count >= 3) {
+                esp_websocket_client_send_text(client, "pong", 5, portMAX_DELAY);
+                ping_pong_count = 0;
+            }
         }
         break;
     case WEBSOCKET_EVENT_ERROR:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_ERROR");
+        xTimerStop(ping_pong_timer, 0);
         break;
     }
 }
@@ -56,6 +76,7 @@ void websocket_app_start(void) {
         websocket_cfg.uri = CONFIG_WEBSOCKET_URI;
     }
     websocket_cfg.ping_interval_sec = 3;
+    ping_pong_timer = xTimerCreate("ping pong timer", 1000 / portTICK_PERIOD_MS, pdTRUE, NULL, ping_pong_counter);
     ESP_LOGI(TAG, "Connecting to %s...", websocket_cfg.uri);
     client = esp_websocket_client_init(&websocket_cfg);
     esp_websocket_register_events(client, WEBSOCKET_EVENT_ANY, websocket_event_handler, (void *)client);

@@ -80,13 +80,17 @@ void app_main(void) {
         ret = wifi_init_sta(sys_config.SSID, sys_config.password);
     }
     
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "cannot access wifi, abort initialize");
+        goto end;
+    }
+    
     if (sys_config.server == NULL) {
         ESP_LOGI(TAG, "server ip not found in config.txt, use built in config: %s", CONFIG_SERVER_ADDR);
     } else {
         ESP_LOGI(TAG, "server ip found in config.txt: %s", sys_config.server);
     }
     
-    if (ret == ESP_FAIL) goto end;
     goto aftertest;
     //initialize camera
     ret = init_camera();
