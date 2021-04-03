@@ -28,7 +28,7 @@ static void ping_pong_counter(TimerHandle_t xTimer) {
 
 void send_data(char *data, size_t len) {
     if (esp_websocket_client_is_connected(client)) {
-        esp_websocket_client_send_text(client, *data, len+1, portMAX_DELAY);
+        esp_websocket_client_send_text(client, data, len, portMAX_DELAY);
         ping_pong_count = 0;
     }
     return;

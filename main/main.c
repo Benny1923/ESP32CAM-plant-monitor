@@ -25,6 +25,11 @@ static char *TAG = "setup";
 
 #include "freertos/event_groups.h"
 
+int imin;
+char *cTime;
+
+TimerHandle_t main_task_timer;
+
 //hardware self test, but not include internet connection
 esp_err_t self_test(void) {
     char *unit = "self_test";
@@ -90,6 +95,8 @@ void app_main(void) {
     } else {
         ESP_LOGI(TAG, "server ip found in config.txt: %s", sys_config.server);
     }
+
+    ntp_adj();
     
     goto aftertest;
     //initialize camera
@@ -118,7 +125,26 @@ void app_main(void) {
     }
 
     aftertest:
-    xTaskCreate(&websocket_app_start, "ws_app_start", 8192, NULL, 5, NULL);
+
+    //xTaskCreate(&websocket_app_start, "ws_app_start", 8192, NULL, 5, NULL);
+
+    cTime = getHourandMinute();
+    imin = intGetMinute();
+    ESP_LOGI(TAG, "current time: %s", cTime);
+    if (imin % 5 != 0) {
+        addMinute(cTime, 5-(imin%5));
+    }
+    ESP_LOGI(TAG, "main task start at: %s", cTime);
+
+    //wait
+    while ((intGetMinute()+1) % 5 !=0) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+
+    ESP_LOGI(TAG, "now starting main task...");
+
+    main_task_timer = xTimerCreate("main task timer", 60 * 1000 / portTICK_PERIOD_MS, pdTRUE, NULL, main_task);
+    xTimerStart(main_task_timer, portMAX_DELAY);
 
     //when nothing wrong
     return;
