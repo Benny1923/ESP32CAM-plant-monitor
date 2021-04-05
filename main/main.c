@@ -126,7 +126,7 @@ void app_main(void) {
 
     aftertest:
 
-    //xTaskCreate(&websocket_app_start, "ws_app_start", 8192, NULL, 5, NULL);
+    xTaskCreate(&websocket_app_start, "ws_app_start", 8192, NULL, 5, NULL);
 
     cTime = getHourandMinute();
     imin = intGetMinute();

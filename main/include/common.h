@@ -48,8 +48,8 @@ typedef struct {
     int lux;
     int moisture;
     double ph;
-    int light;
-    int sprinklers;
+    int light_sw;
+    int sprinklers_sw;
 } sensors_data_t;
 
 typedef struct {

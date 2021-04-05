@@ -20,6 +20,10 @@ char *create_response_msg(int type, void *ptr) {
         cJSON_AddStringToObject(data, "type", "status");
         cJSON *status = cJSON_AddObjectToObject(data, "status");
         cJSON_AddStringToObject(status, "lux", ((sensors_data_t*)ptr)->lux);
+        cJSON_AddStringToObject(status, "moisture", ((sensors_data_t*)ptr)->moisture);
+        cJSON_AddStringToObject(status, "tankfluid", ((sensors_data_t*)ptr)->tank_fluid);
+        cJSON_AddStringToObject(status, "light_sw", ((sensors_data_t*)ptr)->light_sw);
+        cJSON_AddStringToObject(status, "sprinklers_sw", ((sensors_data_t*)ptr)->sprinklers_sw);
         break;
     default: //wrong type
         return "";

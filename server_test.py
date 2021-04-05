@@ -12,6 +12,8 @@ app = Flask(__name__)
 #esp32 last reponse time
 lastresponse = time.time()
 
+client = None
+
 @app.route('/')
 def index():
     return "Hello nothing there"
@@ -23,6 +25,25 @@ def isonline():
         return "online"
     else:
         return "offline"
+
+@app.route('/api/manual')
+def all_manual():
+    op = request.args.get('op')
+    if (op == None):
+        return "error"
+    client.ws.send("hello")
+    return "nuke code sended"
+
+@app.route('/api/manual/<string:device>')
+def manual(device):
+    op = request.args.get('op')
+    if (op == None):
+        return "error"
+    if (device == "sprinklers"):
+        pass
+    elif (device == "light"):
+        pass
+    return "nuke code sended"
 
 @app.route('/api/ESP32/saveimg', methods=['POST'])
 def saveimg():
@@ -41,7 +62,11 @@ class ChatApplication(WebSocketApplication):
         lastresponse = time.time()
     def on_message(self, message):
         global lastresponse
-        print("message received!")
+        global client
+        client = self
+        if (message not in "pong"):
+            print("message received!")
+            print(message)
         lastresponse = time.time()
     def on_close(self, reason):
         print("Connection closed!")
