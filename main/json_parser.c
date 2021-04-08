@@ -22,8 +22,8 @@ char *create_response_msg(int type, void *ptr) {
         cJSON_AddStringToObject(status, "lux", ((sensors_data_t*)ptr)->lux);
         cJSON_AddStringToObject(status, "moisture", ((sensors_data_t*)ptr)->moisture);
         cJSON_AddStringToObject(status, "tankfluid", ((sensors_data_t*)ptr)->tank_fluid);
-        cJSON_AddStringToObject(status, "light_sw", ((sensors_data_t*)ptr)->light_sw);
-        cJSON_AddStringToObject(status, "sprinklers_sw", ((sensors_data_t*)ptr)->sprinklers_sw);
+        cJSON_AddIntToObject(status, "light_sw", ((sensors_data_t*)ptr)->light_sw);
+        cJSON_AddIntToObject(status, "sprinklers_sw", ((sensors_data_t*)ptr)->sprinklers_sw);
         break;
     default: //wrong type
         return "";
@@ -34,5 +34,28 @@ char *create_response_msg(int type, void *ptr) {
     return string;
 }
 
+void manual_parser(cJSON *command_json);
+void update_parser(cJSON *config_json);
+
+//接收指令
+//manual:手動操作 update:更新設定 reboot:重新開機
 void json_parser(char *str) {
+    cJSON *command_json = NULL;
+    command_json = cJSON_Parse(str);
+    if (command_json == NULL ){
+        char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr != NULL) {
+            //error handler
+        }
+        return;
+    }
+    cJSON *op;
+    op = cJSON_GetObjectItemCaseSensitive(command_json, "op");
+    if (strcmp(op->valuestring, "manual") == 0) {
+        //manual handler
+    } else if (strcmp(op->valuestring, "update") == 0) {
+        //update handler
+    } else if (strcmp(op->valuestring, "reboot") == 0) {
+        //reboot handler
+    }
 }
