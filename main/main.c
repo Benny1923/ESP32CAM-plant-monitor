@@ -98,19 +98,19 @@ void app_main(void) {
 
     ntp_adj();
     
-    goto aftertest;
-    //initialize camera
-    ret = init_camera();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "fail to initialize camera");
-        goto end;
-    }
     //system setup
     ret = wire_begin();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "fail to initialize I2C");
         //goto end;
     }
+    //initialize camera
+    ret = init_camera();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "fail to initialize camera");
+        goto end;
+    }
+    goto aftertest;
     ret = lux_setup();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "fail to initialize BH1750: %s", esp_err_to_name(ret));

@@ -17,6 +17,7 @@ void save_log(char *unit, char *msg);
 //cfg_parser.c
 //load config from /sdcard/config.txt
 esp_err_t load_config(void);
+esp_err_t update_config();
 
 //json_parser.c
 //create json response, reference api document
@@ -33,8 +34,16 @@ char *getHourandMinute();
 void addMinute(char *target, int min);
 int isWotkTime(char *start, char *end);
 
+//json_parser.c
+char *create_response_msg(int type, void *ptr);
+void json_parser(char *str);
+
 //task.c
 void main_task(TimerHandle_t xTimer);
+void dev_ctl(int id, int stat);
+
+//ws_connect.c
+void send_data(char *data, size_t len);
 
 typedef struct {
     uint8_t *buf;
@@ -82,5 +91,7 @@ typedef struct {
 } sys_config_t;
 
 extern sys_config_t sys_config;
+
+extern sensors_data_t latest_data;
 
 #endif

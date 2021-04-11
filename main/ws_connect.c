@@ -1,5 +1,6 @@
 #include "include/ws_connect.h"
 #include "include/common.h"
+#include <string.h>
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_event.h"
@@ -34,6 +35,8 @@ void send_data(char *data, size_t len) {
     return;
 }
 
+char *msg_buffer;
+
 static void websocket_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)event_data;
@@ -50,7 +53,9 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_DATA");
         if (data->data_len > 2) {
             ESP_LOGI(TAG, "receive data: %.*s", data->data_len, (char*)data->data_ptr);
-            send_data("ok", 3);
+            msg_buffer = newstr(data->data_len+1);
+            strncpy(msg_buffer, data->data_ptr, data->data_len);
+            json_parser(msg_buffer);
         } else {
             if (ping_pong_count >= 3) {
                 esp_websocket_client_send_text(client, "pong", 5, portMAX_DELAY);

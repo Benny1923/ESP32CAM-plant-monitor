@@ -4,6 +4,7 @@
 #!/usr/bin/env python
 
 import os, time
+import json
 from geventwebsocket import WebSocketServer, WebSocketError, WebSocketApplication, Resource
 from flask import Flask, request, render_template, abort
 
@@ -26,23 +27,49 @@ def isonline():
     else:
         return "offline"
 
+@app.route('/api/setting')
+def update():
+    cmd = {"op":"update","config":{}}
+    with open("config-example.txt", "r") as f:
+        for line in f:
+            if line[0] == '#' or len(line) < 1:
+                continue
+            temp = line.split('=', 1)
+            temp[1] = temp[1].strip('\n')
+            if temp[1].isdigit():
+                cmd["config"][temp[0]] = int(temp[1])
+            else:
+                cmd["config"][temp[0]] = temp[1]
+    client.ws.send(json.dumps(cmd))
+    return "nuke code sended"
+
 @app.route('/api/manual')
 def all_manual():
     op = request.args.get('op')
     if (op == None):
         return "error"
-    client.ws.send("hello")
+    cmd = {"op": "manual", "device":{"sprinklers": int(op), "light": int(op)}}
+    client.ws.send(json.dumps(cmd))
     return "nuke code sended"
 
 @app.route('/api/manual/<string:device>')
 def manual(device):
     op = request.args.get('op')
+    cmd = {"op": "manual", "device":{}}
     if (op == None):
         return "error"
     if (device == "sprinklers"):
-        pass
+        cmd["device"] = {device: int(op)}
     elif (device == "light"):
+        cmd["device"] = {device: int(op)}
         pass
+    client.ws.send(json.dumps(cmd))
+    return "nuke code sended"
+
+@app.route('/api/manual/reboot')
+def reboot():
+    cmd = {"op": "reboot"}
+    client.ws.send(json.dumps(cmd))
     return "nuke code sended"
 
 @app.route('/api/ESP32/saveimg', methods=['POST'])
@@ -60,17 +87,17 @@ class ChatApplication(WebSocketApplication):
         global lastresponse
         print("client connected!")
         lastresponse = time.time()
+        client = self
     def on_message(self, message):
         global lastresponse
         global client
         client = self
-        if (message not in "pong"):
+        if (message != "pong"):
             print("message received!")
             print(message)
         lastresponse = time.time()
     def on_close(self, reason):
         print("Connection closed!")
-
 
 if __name__ == '__main__':
     server = WebSocketServer(("0.0.0.0", 8080), Resource([

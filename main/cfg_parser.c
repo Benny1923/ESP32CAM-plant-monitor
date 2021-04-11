@@ -6,6 +6,7 @@
 #include "esp_log.h"
 
 #define CFG_PATH "/sdcard/config.txt"
+#define OLD_CFG_PATH "/sdcard/config.old.txt"
 
 static char *TAG = "cfg_parser";
 
@@ -86,12 +87,31 @@ esp_err_t update_config() {
         ESP_LOGE(TAG, "cannot access %s", CFG_PATH);
         goto fail;
     }
-    FILE *file = fopen(CFG_PATH, "r+");
+    rename(CFG_PATH, OLD_CFG_PATH);
+    FILE *oldf = fopen(OLD_CFG_PATH, "r");
+    FILE *file = fopen(CFG_PATH, "w");
     char *line = malloc(60);
     int len = 60;
-    while(fgets(line, len, file)!=NULL) {
-        
+    while(fgets(line, len, oldf)!=NULL) {
+        if (line[0]=='#') {
+            fputs(line, file);
+            continue;
+        }
+        for(int i=0 ; i<(sizeof(data)/sizeof(struct dataset)) ; i++) {
+            if (strstr(line, data[i].tag)!=NULL) {
+                    fputs(data[i].tag,file);
+                    fputs("=",file);
+                if (strcmp(data[i].type, "char") == 0) {
+                    fputs(*data[i].value, file);
+                } else if (strcmp(data[i].type, "int") == 0) {
+                    fprintf(file,"%d",(int)*data[i].value);
+                }
+                fputs("\n", file);
+                break;
+            }
+        }
     }
+    fclose(oldf);
     fclose(file);
     return ESP_OK;
     fail:
