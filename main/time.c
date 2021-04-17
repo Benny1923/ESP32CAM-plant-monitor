@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-const char *YMD_HMEXAMPLE = "2021/04/01 17:30";
+const char *YMDEXAMPLE = "2021-04-01";
 const char *HMEXAMPLE = "17:30";
 const char *MEXAMPLE  = "30";
 
@@ -31,7 +31,7 @@ tms convertStrtoHAM(char *str) {
 
 char *getMinute() {
     char *timestamp = newstr(strlen(MEXAMPLE) + 1);
-    strftime(timestamp, strlen(HMEXAMPLE) + 1, "%M", getCurrentTime());
+    strftime(timestamp, strlen(MEXAMPLE) + 1, "%M", getCurrentTime());
     return timestamp;
 }
 
@@ -42,6 +42,12 @@ int intGetMinute() {
 char *getHourandMinute() {
     char *timestamp = newstr(strlen(HMEXAMPLE)+1);
     strftime(timestamp, strlen(HMEXAMPLE) + 1, "%H:%M", getCurrentTime());
+    return timestamp;
+}
+
+char *getYearMonthDay() {
+    char *timestamp = newstr(strlen(YMDEXAMPLE)+1);
+    strftime(timestamp, strlen(YMDEXAMPLE) + 1, "%Y-%m-%d", getCurrentTime());
     return timestamp;
 }
 

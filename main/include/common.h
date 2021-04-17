@@ -13,6 +13,7 @@ void ntp_adj(void);
 //sdcard.c
 //save log to /sdcard/log.txt
 void save_log(char *unit, char *msg);
+void checkdir(char *path);
 
 //cfg_parser.c
 //load config from /sdcard/config.txt
@@ -32,7 +33,8 @@ char *getMinute();
 int intGetMinute();
 char *getHourandMinute();
 void addMinute(char *target, int min);
-int isWotkTime(char *start, char *end);
+int isWorkTime(char *start, char *end);
+char *getYearMonthDay();
 
 //json_parser.c
 char *create_response_msg(int type, void *ptr);

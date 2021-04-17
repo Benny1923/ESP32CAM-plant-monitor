@@ -124,6 +124,7 @@ esp_err_t http_post(char *buf, size_t len, char *name, char *filename) {
     esp_http_client_handle_t client = esp_http_client_init(&config);
     char *post_data = packhead(name, filename);
     if (sys_config.server != NULL) {
+        config.host = newstr(strlen(sys_config.server)+1);
         strcpy(config.host, sys_config.server);
     }
     //esp_http_client_set_url(client, "http://httpbin.org/post"); //when you test protocol

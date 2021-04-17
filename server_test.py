@@ -92,7 +92,7 @@ class ChatApplication(WebSocketApplication):
         global lastresponse
         global client
         client = self
-        if (message != "pong"):
+        if (len(message) > 4):
             print("message received!")
             print(message)
         lastresponse = time.time()

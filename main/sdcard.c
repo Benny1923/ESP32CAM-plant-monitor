@@ -8,6 +8,8 @@
 #include "esp_vfs_fat.h"
 #include <sys/time.h>
 #include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 sdmmc_card_t *card;
 
@@ -31,6 +33,14 @@ void init_sdcard() {
   } else {
     ESP_LOGE(TAG, "Failed to mount SD card VFAT filesystem. Error: %s", esp_err_to_name(ret));
   }
+}
+
+//check dir, create dir when not exist
+void checkdir(char *path) {
+    DIR *d = opendir(path);
+    if (d == NULL) {
+        mkdir(path, 0777);
+    }
 }
 
 void save_file(uint8_t *buf, size_t len, char *filename) {
@@ -66,10 +76,6 @@ char *get_time() {
 void save_log(char *unit, char *msg) {
   FILE *file = fopen("/sdcard/log.txt", "a");
   fputs(get_time(),file);
-  fputs(" ", file);
-  fputs(unit, file);
-  fputs(": ", file);
-  fputs(msg, file);
-  fputs("\n",file);
+  fprintf(file, " %s: %s\n", unit, msg);
   fclose(file);
 }
