@@ -74,9 +74,65 @@ esp_err_t lux_read(uint16_t *data) {
     return ret;
 }
 
+//ADS1115 writeRegister
+esp_err_t adc_writereg(uint8_t reg, uint16_t value) {
+    esp_err_t ret;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, ADS1015_ADDRESS << 1 | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (value >> 8), ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (value & 0xFF), ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "cannot setup ADC");
+        return ret;
+    }
+    return ret;
+}
+
+//ADS1115 readRegister
+esp_err_t adc_readreg(uint8_t reg, uint16_t *data) {
+    esp_err_t ret;
+    uint8_t data_h = 0, data_l = 0;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, ADS1015_ADDRESS << 1 | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "cannot setup ADC read register");
+        return ret;
+    }
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, ADS1015_ADDRESS << 1 | READ_BIT, ACK_CHECK_EN);
+    i2c_master_read_byte(cmd, &data_h, ACK_VAL);
+    i2c_master_read_byte(cmd, &data_l, NACK_VAL);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "cannot read ADC");
+        return ret;
+    }
+    *data = (data_h << 8 | data_l);
+    return ret;
+}
+
+//wait adc conversion
+int adc_conversion() {
+    uint16_t data;
+    adc_readreg(ADS1015_REG_POINTER_CONFIG, &data);
+    return (data & 0x8000) != 0;
+}
+
 //AD轉換(單一頻道)
 esp_err_t adc_read(uint8_t ch, uint16_t *data) {
-    uint8_t data_h = 0, data_l = 0;
     // Start with default values
     uint16_t config =
         ADS1015_REG_CONFIG_CQUE_NONE |    // Disable the comparator (default val)
@@ -109,45 +165,12 @@ esp_err_t adc_read(uint8_t ch, uint16_t *data) {
     config |= ADS1015_REG_CONFIG_OS_SINGLE;
 
     int ret;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ADS1015_ADDRESS << 1 | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, (uint8_t)ADS1015_REG_POINTER_CONFIG, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, (uint8_t)(config >> 8), ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, (uint8_t)(config & 0xFF), ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "cannot setup ADC(%d)", ch);
-        return ret;
-    }
-    vTaskDelay(9 / portTICK_PERIOD_MS);
-    cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ADS1015_ADDRESS << 1 | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, ADS1015_REG_POINTER_CONVERT, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "cannot setup ADC(%d) read register", ch);
-        return ret;
-    }
-    cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ADS1015_ADDRESS << 1 | READ_BIT, ACK_CHECK_EN);
-    i2c_master_read_byte(cmd, &data_h, ACK_VAL);
-    i2c_master_read_byte(cmd, &data_l, NACK_VAL);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "cannot read ADC(%d)", ch);
-        return ret;
-    }
-    *data = (data_h << 8 | data_l);
-    ESP_LOGI(TAG, "ADS1115(%d): %d", ch, (data_h << 8 | data_l));
+    ret = adc_writereg(ADS1015_REG_POINTER_CONFIG, config);
+    if (ret) return ret;
+    while(!adc_conversion());
+    adc_readreg(ADS1015_REG_POINTER_CONVERT, data);
+    
+    ESP_LOGI(TAG, "ADS1115(%d): %d", ch, *data);
     return ret;
 }
 
