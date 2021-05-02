@@ -30,7 +30,10 @@ void task_camera(void) {
     http_post_img_t img = {
         .name = "img"
     };
+    dev_ctl(1, 1);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
     img.len = take_picture(&img.buf);
+    dev_ctl(1, 0);
     img.filename = getHourandMinute();
     img.filename[2] = '-';
     strpad(&img.filename, ".jpg");
@@ -41,6 +44,7 @@ void task_camera(void) {
     free(path);
 }
 
+//sensor task: collect data and send to server
 void task_sensor(void) {
     adc_read(0, &latest_data.moisture);
     adc_read(1, &latest_data.tank_fluid);
@@ -55,16 +59,16 @@ void task_sensor(void) {
 void dev_ctl(int id, int stat) {
     switch (id) {
     case 1:
-        pcf8574t_gpio_set(1, stat);
+        pcf8574t_gpio_set(0, !stat);
         latest_data.light_sw = stat;
         break;
     case 2:
-        pcf8574t_gpio_set(2, stat);
+        pcf8574t_gpio_set(1, !stat);
         latest_data.sprinklers_sw = stat;
         break;
     case 3:
-        pcf8574t_gpio_set(1, stat);
-        pcf8574t_gpio_set(2, stat);
+        pcf8574t_gpio_set(0, !stat);
+        pcf8574t_gpio_set(1, !stat);
         latest_data.light_sw = stat;
         latest_data.sprinklers_sw = stat;
         break;
@@ -93,6 +97,7 @@ void main_task(TimerHandle_t xTimer) {
     //sensor & switch task
     if (count%SENSOR_INTERVAL == 0) {
         ESP_LOGI(TAG, "sensor task triggered at %s", getHourandMinute());
+        save_log(TAG, "sensor task triggered");
         task_sensor();
         task_switch();
     }
@@ -100,9 +105,9 @@ void main_task(TimerHandle_t xTimer) {
     //camera task
     if (count%sys_config.camera.interval == 0) {
         ESP_LOGI(TAG, "camera task triggered at %s", getHourandMinute());
+        save_log(TAG, "camera task triggered");
         task_camera();
     }
-
 
     count++;
 }

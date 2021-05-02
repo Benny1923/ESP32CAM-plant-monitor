@@ -50,7 +50,7 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
         xTimerStop(ping_pong_timer, 0);
         break;
     case WEBSOCKET_EVENT_DATA:
-        ESP_LOGI(TAG, "WEBSOCKET_EVENT_DATA");
+        //ESP_LOGI(TAG, "WEBSOCKET_EVENT_DATA");
         if (data->data_len > 2) {
             ESP_LOGI(TAG, "receive data: %.*s", data->data_len, (char*)data->data_ptr);
             msg_buffer = newstr(data->data_len+1);

@@ -36,8 +36,8 @@ esp_err_t self_test(void) {
     ESP_LOGI(unit, "staring self test");
     esp_err_t ret = ESP_OK;
     uint16_t data = 0;
-    ret = lux_read(&data);
-    if (data > 300) ret = ESP_FAIL; //data incorrect
+    //ret = lux_read(&data);
+    //if (data > 300) ret = ESP_FAIL; //data incorrect
     if (ret != ESP_OK) goto fail;
     ret = adc_read(0, &data);
     ret = adc_read(1, &data);
@@ -87,6 +87,7 @@ void app_main(void) {
     
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "cannot access wifi, abort initialize");
+        save_log(TAG, "cannot access wifi, abort initialize");
         goto end;
     }
     
@@ -102,16 +103,18 @@ void app_main(void) {
     ret = wire_begin();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "fail to initialize I2C");
+        save_log(TAG, "fail to initialize I2C");
         //goto end;
     }
     //initialize camera
     ret = init_camera();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "fail to initialize camera");
+        save_log(TAG, "fail to initialize camera");
         goto end;
     }
-    goto aftertest;
-    ret = lux_setup();
+    //goto aftertest;
+    //ret = lux_setup();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "fail to initialize BH1750: %s", esp_err_to_name(ret));
         goto end;
@@ -124,7 +127,7 @@ void app_main(void) {
         ESP_LOGI(TAG, "self test success");
     }
 
-    aftertest:
+    //aftertest:
 
     xTaskCreate(&websocket_app_start, "ws_app_start", 8192, NULL, 5, NULL);
 
@@ -151,6 +154,7 @@ void app_main(void) {
     //when something fail
     end:
         ESP_LOGI(TAG, "system stopped");
+        save_log(TAG, "system stopped");
     // fflush(stdout);
     // esp_restart();
 }
