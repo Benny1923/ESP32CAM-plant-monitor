@@ -30,7 +30,7 @@ char *create_response_msg(int type, void *ptr) {
         return "";
         break;
     }
-    string = cJSON_Print(data);
+    string = cJSON_PrintUnformatted(data);
     //printf("%s\n", string);
     return string;
 }
@@ -71,16 +71,16 @@ void manual_parser(cJSON *command_json) {
     int dev_off = 0;
     if (cJSON_HasObjectItem(command_json, "light")) {
         if (cJSON_GetObjectItemCaseSensitive(command_json, "light")->valueint) {
-            dev_on = dev_on | 0x01;
+            dev_on = dev_on | 0x02;
         } else {
-            dev_off = dev_off | 0x01;
+            dev_off = dev_off | 0x02;
         }
     }
     if (cJSON_HasObjectItem(command_json, "sprinklers")) {
         if (cJSON_GetObjectItemCaseSensitive(command_json, "sprinklers")->valueint) {
-            dev_on = dev_on | 0x02;
+            dev_on = dev_on | 0x01;
         } else {
-            dev_off = dev_off | 0x02;
+            dev_off = dev_off | 0x01;
         }
     }
     if (dev_on) {
@@ -90,7 +90,7 @@ void manual_parser(cJSON *command_json) {
         dev_ctl(dev_off, 0);
     }
     char *msg = create_response_msg(3, &latest_data);
-    send_data(msg, strlen(msg)+1);
+    send_data(msg, strlen(msg));
 }
 
 //解析器綁定

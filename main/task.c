@@ -14,6 +14,7 @@
 int count = 0;
 
 sensors_data_t latest_data;
+int light_status = 0;
 
 void task_camera(void) {
     if (!sys_config.camera.nightmode) {
@@ -27,13 +28,15 @@ void task_camera(void) {
     strpad(&path, ymd);
     free(ymd);
     checkdir(path);
-    http_post_img_t img = {
+    static http_post_img_t img = {
         .name = "img"
     };
-    dev_ctl(1, 1);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    if (!light_status) {
+        dev_ctl(1, 1);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
     img.len = take_picture(&img.buf);
-    dev_ctl(1, 0);
+    if (!light_status) dev_ctl(1, 0);
     img.filename = getHourandMinute();
     img.filename[2] = '-';
     strpad(&img.filename, ".jpg");
@@ -44,13 +47,50 @@ void task_camera(void) {
     free(path);
 }
 
+
+#define RAW_lux_MAX 29760
+#define RAW_lux_MIN 80
+#define RAW_moisture_MAX 100
+#define RAW_moisture_MIN 0
+#define RAW_tank_fluid_MAX 100 
+#define RAW_tank_fluid_MIN 0
+//raw data converter
+//type: 1.lux 2.moisture 3.tank_fulid
+void raw_data_converter(int type, uint16_t *raw) {
+    int unit = 1;
+    int low = 0;
+    switch (type) {
+    case 1:
+        unit = (RAW_lux_MAX - RAW_lux_MIN) / 100;
+        low = RAW_lux_MIN;
+        break;
+    case 2:
+        unit = (RAW_moisture_MAX - RAW_moisture_MIN) / 100;
+        low = RAW_moisture_MIN;
+        break;
+    case 3:
+        unit = (RAW_tank_fluid_MAX - RAW_tank_fluid_MIN) / 100;
+        low = RAW_tank_fluid_MIN;
+        break;
+    default:
+        break;
+    }
+    *raw = (*raw - low) / unit;
+}
+
 //sensor task: collect data and send to server
 void task_sensor(void) {
     adc_read(0, &latest_data.moisture);
+    raw_data_converter(2, &latest_data.moisture);
     adc_read(1, &latest_data.tank_fluid);
+    raw_data_converter(3, &latest_data.tank_fluid);
     char *status = create_response_msg(3, &latest_data);
-    send_data(status, strlen(status)+1);
+    send_data(status, strlen(status));
     free(status);
+    char *log = newstr(strlen("adc0: 12345, adc1: 12345")+1);
+    sprintf(log, "adc0: %.5d, adc1: %.5d", latest_data.moisture, latest_data.tank_fluid);
+    save_log("task_sensor", log);
+    free(log);
 }
 
 //relay control
@@ -78,13 +118,27 @@ void dev_ctl(int id, int stat) {
     }
 }
 
+
+#define sprinklers_turnon_SEC 10
 void task_switch(void) {
     if (isWorkTime(sys_config.light.start, sys_config.light.end)) {
         //do something
+        if (latest_data.lux >= sys_config.light.max) {
+            dev_ctl(2, 0);
+            light_status = 0;
+        } else if (latest_data.lux <= sys_config.light.min) {
+            dev_ctl(2, 1);
+            light_status = 1;
+        }
     }
 
     if (isWorkTime(sys_config.sprinklers.start, sys_config.sprinklers.end)) {
         //do something
+        if (latest_data.moisture <= sys_config.sprinklers.min) {
+            dev_ctl(1, 1);
+            vTaskDelay(sprinklers_turnon_SEC * 1000 / portTICK_PERIOD_MS);
+            dev_ctl(1, 0);
+        }
     }
 
 }
@@ -110,4 +164,7 @@ void main_task(TimerHandle_t xTimer) {
     }
 
     count++;
+
+    //do nothing require by free rtos
+    count = count;
 }
